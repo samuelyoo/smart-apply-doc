@@ -1,0 +1,691 @@
+openapi: 3.1.0
+info:
+  title: Resume-Flow AI API
+  version: 1.0.0
+  summary: API spec for Resume-Flow AI MVP
+  description: >
+    OpenAPI specification for the Resume-Flow AI backend.
+    This API supports profile ingestion, profile retrieval, JD optimization,
+    application history tracking, and status updates.
+
+servers:
+  - url: https://api.resume-flow.ai
+    description: Production
+  - url: http://localhost:3001
+    description: Local development
+
+tags:
+  - name: Health
+  - name: Profile
+  - name: Optimization
+  - name: Applications
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ApplicationId:
+      name: id
+      in: path
+      required: true
+      description: Application history UUID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [message, statusCode]
+      properties:
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string
+          examples: [Bad Request]
+        statusCode:
+          type: integer
+          examples: [400]
+
+    HealthResponse:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status:
+          type: string
+          examples: [ok]
+        timestamp:
+          type: string
+          format: date-time
+
+    ExperienceItem:
+      type: object
+      required: [company, role, description]
+      properties:
+        company:
+          type: string
+        role:
+          type: string
+        start_date:
+          type: string
+          nullable: true
+          examples: ["2024-10"]
+        end_date:
+          type: string
+          nullable: true
+          examples: [null]
+        description:
+          type: array
+          items:
+            type: string
+
+    EducationItem:
+      type: object
+      properties:
+        school:
+          type: string
+        degree:
+          type: string
+        start_date:
+          type: string
+          nullable: true
+        end_date:
+          type: string
+          nullable: true
+
+    MasterProfile:
+      type: object
+      required:
+        - id
+        - clerk_user_id
+        - base_skills
+        - certifications
+        - experiences
+        - education
+        - profile_version
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        clerk_user_id:
+          type: string
+        full_name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        linkedin_url:
+          type: string
+          format: uri
+          nullable: true
+        portfolio_url:
+          type: string
+          format: uri
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        base_skills:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExperienceItem'
+        education:
+          type: array
+          items:
+            $ref: '#/components/schemas/EducationItem'
+        raw_profile_source:
+          type: string
+          nullable: true
+        profile_version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProfileIngestRequest:
+      type: object
+      required: [source, raw_text]
+      properties:
+        source:
+          type: string
+          enum: [linkedin, manual, upload]
+        raw_text:
+          type: string
+        source_url:
+          type: string
+          format: uri
+          nullable: true
+        overwrite:
+          type: boolean
+          default: true
+
+    ProfileIngestResponse:
+      type: object
+      required: [success, profile]
+      properties:
+        success:
+          type: boolean
+          examples: [true]
+        profile:
+          $ref: '#/components/schemas/MasterProfile'
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        location:
+          type: string
+        linkedin_url:
+          type: string
+          format: uri
+        portfolio_url:
+          type: string
+          format: uri
+        summary:
+          type: string
+        base_skills:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExperienceItem'
+        education:
+          type: array
+          items:
+            $ref: '#/components/schemas/EducationItem'
+
+    ExtractedRequirements:
+      type: object
+      required: [hard_skills, soft_skills, certifications]
+      properties:
+        hard_skills:
+          type: array
+          items:
+            type: string
+        soft_skills:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+
+    SuggestedChange:
+      type: object
+      required: [type, target_section, reason]
+      properties:
+        type:
+          type: string
+          enum: [bullet_injection, summary_update, skills_insertion, warning]
+        target_section:
+          type: string
+          enum: [summary, skills, experience, warning]
+        reason:
+          type: string
+        before:
+          type: string
+          nullable: true
+        after:
+          type: string
+          nullable: true
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          nullable: true
+
+    OptimizedResume:
+      type: object
+      properties:
+        summary:
+          type: string
+          nullable: true
+        skills:
+          type: array
+          items:
+            type: string
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExperienceItem'
+        warnings:
+          type: array
+          items:
+            type: string
+
+    OptimizeRequest:
+      type: object
+      required: [job_description_text, job_title, company_name]
+      properties:
+        job_description_text:
+          type: string
+        job_title:
+          type: string
+        company_name:
+          type: string
+        source_platform:
+          type: string
+          enum: [linkedin, indeed, workday, greenhouse, lever, other]
+          default: other
+        source_url:
+          type: string
+          format: uri
+          nullable: true
+
+    OptimizeResponse:
+      type: object
+      required:
+        - ats_score_before
+        - ats_score_after
+        - extracted_requirements
+        - suggested_changes
+        - optimized_resume_json
+      properties:
+        ats_score_before:
+          type: integer
+          minimum: 0
+          maximum: 100
+        ats_score_after:
+          type: integer
+          minimum: 0
+          maximum: 100
+        extracted_requirements:
+          $ref: '#/components/schemas/ExtractedRequirements'
+        suggested_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuggestedChange'
+        optimized_resume_json:
+          $ref: '#/components/schemas/OptimizedResume'
+
+    ApplicationStatus:
+      type: string
+      enum: [draft, generated, applied, interviewing, offer, rejected, withdrawn]
+
+    ApplicationHistoryItem:
+      type: object
+      required:
+        - id
+        - clerk_user_id
+        - company_name
+        - job_title
+        - status
+        - created_at
+        - applied_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        clerk_user_id:
+          type: string
+        company_name:
+          type: string
+        job_title:
+          type: string
+        source_platform:
+          type: string
+          nullable: true
+        source_url:
+          type: string
+          format: uri
+          nullable: true
+        job_description_hash:
+          type: string
+          nullable: true
+        drive_link:
+          type: string
+          format: uri
+          nullable: true
+        ats_score_before:
+          type: integer
+          nullable: true
+        ats_score_after:
+          type: integer
+          nullable: true
+        applied_resume_snapshot:
+          type: object
+          additionalProperties: true
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        created_at:
+          type: string
+          format: date-time
+        applied_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateApplicationRequest:
+      type: object
+      required: [company_name, job_title, status]
+      properties:
+        company_name:
+          type: string
+        job_title:
+          type: string
+        source_platform:
+          type: string
+          enum: [linkedin, indeed, workday, greenhouse, lever, other]
+          default: other
+        source_url:
+          type: string
+          format: uri
+          nullable: true
+        drive_link:
+          type: string
+          format: uri
+          nullable: true
+        ats_score_before:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        ats_score_after:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        applied_resume_snapshot:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+    CreateApplicationResponse:
+      type: object
+      required: [success, application_id]
+      properties:
+        success:
+          type: boolean
+          examples: [true]
+        application_id:
+          type: string
+          format: uuid
+
+    UpdateApplicationStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+
+    ListApplicationsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationHistoryItem'
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/profile/me:
+    get:
+      tags: [Profile]
+      summary: Get current user's master profile
+      responses:
+        '200':
+          description: Master profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterProfile'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags: [Profile]
+      summary: Update current user's master profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Updated master profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterProfile'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/profile/ingest:
+    post:
+      tags: [Profile]
+      summary: Ingest raw profile text into a structured master profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileIngestRequest'
+      responses:
+        '200':
+          description: Structured profile generated and stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileIngestResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/optimize:
+    post:
+      tags: [Optimization]
+      summary: Optimize resume content against a job description
+      description: >
+        Takes a raw JD, loads the current user's master profile, extracts requirements,
+        computes ATS score before/after, and returns an optimized resume draft with diffable suggestions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OptimizeRequest'
+      responses:
+        '200':
+          description: Optimization result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizeResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: LLM/schema output validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Upstream AI timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/applications:
+    get:
+      tags: [Applications]
+      summary: List current user's application history
+      responses:
+        '200':
+          description: Application history items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListApplicationsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags: [Applications]
+      summary: Save generated application metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApplicationRequest'
+      responses:
+        '201':
+          description: Application created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateApplicationResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/applications/{id}/status:
+    patch:
+      tags: [Applications]
+      summary: Update application status
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationStatusRequest'
+      responses:
+        '200':
+          description: Updated application item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationHistoryItem'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Application not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

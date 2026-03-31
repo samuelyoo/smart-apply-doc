@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page.title | default: site.title }}</title>
+    <meta
+      name="description"
+      content="{{ page.description | default: site.description }}"
+    />
+    <meta name="theme-color" content="#10243f" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="{{ page.title | default: site.title }}"
+    />
+    <meta
+      property="og:description"
+      content="{{ page.description | default: site.description }}"
+    />
+    <meta property="og:url" content="{{ page.url | absolute_url }}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ '/assets/css/style.css' | relative_url }}"
+    />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="{{ '/' | relative_url }}">
+          <span class="brand-mark">SA</span>
+          <span class="brand-copy">
+            <strong>Smart Apply</strong>
+            <span>Documentation hub</span>
+          </span>
+        </a>
+
+        <nav class="site-nav" aria-label="Primary">
+          <a href="{{ '/' | relative_url }}">Home</a>
+          <a href="{{ '/architecture/' | relative_url }}">Architecture</a>
+          <a href="{{ '/prd/' | relative_url }}">PRD</a>
+          <a href="{{ '/trd/' | relative_url }}">TRD</a>
+          <a href="{{ '/brd-mvp-01/' | relative_url }}">Requirements</a>
+          <a href="{{ '/design/hld-mvp-p01/' | relative_url }}">Design</a>
+          <a href="{{ '/qa-report-01/' | relative_url }}">Reviews</a>
+          <a href="{{ '/ai-prompts/' | relative_url }}">AI Prompts</a>
+        </nav>
+      </header>
+
+      <main class="page-content">
+        {% if page.hero_title %}
+        <section class="hero">
+          <p class="eyebrow">{{ page.hero_eyebrow | default: "Smart Apply docs" }}</p>
+          <h1>{{ page.hero_title }}</h1>
+          {% if page.hero_summary %}
+          <p class="hero-summary">{{ page.hero_summary }}</p>
+          {% endif %}
+        </section>
+        {% endif %}
+
+        <article class="content-card">{{ content }}</article>
+      </main>
+
+      <footer class="site-footer">
+        <span>Product, technical, and AI workflow docs for Smart Apply.</span>
+        <a href="{{ site.repository_url }}" target="_blank" rel="noreferrer">
+          View repository
+        </a>
+      </footer>
+    </div>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+      const mermaidCodeBlocks = Array.from(
+        document.querySelectorAll("pre code.language-mermaid")
+      );
+
+      if (mermaidCodeBlocks.length > 0) {
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "loose",
+          theme: "base",
+          themeVariables: {
+            primaryColor: "#f8f4ec",
+            primaryTextColor: "#162235",
+            primaryBorderColor: "#10243f",
+            lineColor: "#355778",
+            secondaryColor: "#dce9f2",
+            tertiaryColor: "#fffdf8",
+            fontFamily: "Manrope, sans-serif",
+          },
+        });
+
+        mermaidCodeBlocks.forEach((codeBlock, index) => {
+          const pre = codeBlock.parentElement;
+          if (!pre) return;
+
+          const mermaidContainer = document.createElement("div");
+          mermaidContainer.className = "mermaid";
+          mermaidContainer.id = `mermaid-diagram-${index + 1}`;
+          mermaidContainer.textContent = codeBlock.textContent ?? "";
+
+          pre.replaceWith(mermaidContainer);
+        });
+
+        await mermaid.run({
+          querySelector: ".mermaid",
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+title: Smart Apply Docs
+description: Product, technical, architecture, and prompt documentation for Smart Apply.
+url: "https://samuelyoo.github.io"
+baseurl: "/smart-apply-doc"
+repository_url: "https://github.com/samuelyoo/smart-apply-doc"
+markdown: kramdown
+permalink: pretty
+exclude:
+  - node_modules
+  - vendor
+  - ai-prompts/impl
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
